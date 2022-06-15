@@ -13,7 +13,7 @@ interface IERC20 {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }
 
-contract PointsToken is IERC20 {
+contract MarishaToken is IERC20 {
     address immutable private i_owner;
     string public constant name = "ERC20_Marisha";
     string public constant symbol = "MAR";
