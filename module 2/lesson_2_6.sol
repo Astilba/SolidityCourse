@@ -15,8 +15,8 @@ interface IERC20 {
 
 contract PointsToken is IERC20 {
     address immutable private i_owner;
-    string public constant name = "ERC20BlockchainAZ";
-    string public constant symbol = "ERC";
+    string public constant name = "ERC20_Marisha";
+    string public constant symbol = "MAR";
     uint8 public constant decimals = 18;
 
     enum UserType{ NORMAL, PREMIUM, VIP }
