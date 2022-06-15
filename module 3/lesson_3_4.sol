@@ -7,6 +7,7 @@ import "github.com/Astilba/SolidityCourse/blob/main/module%202/lesson_2_6.sol";
 error Lottery__PreviousLotteryIsNotOverYet();
 error Lottery__roundTimeIsNoOverYet();
 error Lottery__ThisRoundAlreadyEnded();
+error Lottery__ThisRoundIsNotCompleted();
 error Lottery__TicketsAmountMustBeGreaterThenZero();
 
 contract Lottery {
@@ -78,7 +79,7 @@ contract Lottery {
 
     function endRound() external onlyOwner {
         uint256 round = s_currentRound;
-        LotteryRound storage currentLottery = LotteryRounds[currentRound];
+        LotteryRound storage currentLottery = s_lotteryRounds[round];
 
         if(currentLottery.startTime + LOTTERY_DURATION > block.timestamp) {
             revert Lottery__roundTimeIsNoOverYet();
@@ -125,7 +126,7 @@ contract Lottery {
 
         uint256 currentRound = s_currentRound;
 
-        LotteryRound storage currentLottery = LotteryRounds[currentRound];
+        LotteryRound storage currentLottery = s_lotteryRounds[currentRound];
 
         if (currentLottery.winner != address(0)) {
             revert Lottery__ThisRoundAlreadyEnded();
@@ -150,7 +151,7 @@ contract Lottery {
         return s_playerTickets[msg.sender][_round].length;
     }
 
-    function getMyTickets(uint256 _round) external view returns(uint256[]) {
+    function getMyTickets(uint256 _round) external view returns(uint256[] memory) {
         return s_playerTickets[msg.sender][_round];
     }
 
@@ -162,7 +163,10 @@ contract Lottery {
         return s_lotteryRounds[_round].ticketPrice;
     }
 
-    function getWinningTicketNumber(uint256 _round) external view roundIsCompleted(_round) returns(uint256) {
+    function getWinningTicketNumber(uint256 _round) external view returns(uint256) {
+        if (s_lotteryRounds[_round].winner == address(0)) {
+            revert Lottery__ThisRoundIsNotCompleted();
+        }
         return s_lotteryRounds[_round].winningNumber;
     }
 }
