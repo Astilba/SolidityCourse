@@ -3,11 +3,17 @@
 pragma solidity ^0.8.14;
 
 import "github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
+import "github.com/Astilba/SolidityCourse/blob/main/module%202/lesson_2_6.sol";
 
 contract Factory is Ownable {
 
+    event AddChild(address childOwner, address contractAddress);
+    event ApproveRequest(address orgAddress);
+    event UpdateCertificate(bytes32 fioPassportHash, CertificateType);
+
     uint256 constant public MIN_DEPOSIT = 1;
     enum CertificateType{ Vaccination, PCR }
+    enum OrgType{ Clinic, Laboratory }
 
     struct Certificate {
         CertificateType certificateType;
@@ -22,8 +28,14 @@ contract Factory is Ownable {
     }
 
     struct Org {
+        OrgType orgType;
         string name;
         bool approved;
+    }
+
+    struct Client {
+        bytes32 fioHash;
+        bytes32 passportHash;
     }
 
     mapping(bytes32 => Certificate) private s_userCertificate;
@@ -42,13 +54,20 @@ contract Factory is Ownable {
         });
         s_children[newContract] = tmp;
         s_childAddresses.push(newContract);
+        emit AddChild(_childOwner, newContract);
         return true;
     }
 
-    function addRequest(string memory _name) external payable {
+    function addRequest(string memory _name, uint8 _type) external payable {
+        OrgType orgType = OrgType.Clinic;
+        if (_type == 1) {
+            orgType = OrgType.Laboratory;
+        }
+
         require(msg.value >= MIN_DEPOSIT, "Insufficient funds have been sent!");
         require(strLength(_name) > 5 , "Name of your organisation is too short. Request is cancelled.");
         Org memory tmp = Org({
+            orgType: orgType,
             name: _name,
             approved: false
         });
@@ -61,6 +80,7 @@ contract Factory is Ownable {
         require(s_organisations[_org].approved == false, "This request is already approved.");
         s_organisations[_org].approved = true;
         bool res = addChild(_org);
+        emit ApproveRequest(_org);
         return res;
     }
 
@@ -80,6 +100,7 @@ contract Factory is Ownable {
             ipfsCID: _cid
         });
         s_userCertificate[fioHash] = tmp;
+        emit UpdateCertificate(fioHash, certType);
     }
 
     function getCertificate(string memory _fio, uint64 _passport, uint8 _type) external view returns(Certificate memory) {
@@ -91,7 +112,7 @@ contract Factory is Ownable {
         return s_childAddresses.length;
     }
 
-    function strLength (string memory _text) internal pure returns (uint256) {
+    function strLength(string memory _text) internal pure returns(uint256) {
         bytes memory res = abi.encodePacked(_text);
         return res.length;
     }
