@@ -5,7 +5,7 @@ pragma solidity ^0.8.15;
 import "\SchoolManagement.sol";
 
 error MinistryEducationScienceRF__NewMinistryHasInvalidAddress();
-error MinistryEducationScienceRF__SchoolHasInvalidAddress();
+error MinistryEducationScienceRF__SchoolOwnerHasInvalidAddress();
 error MinistryEducationScienceRF__NameOfSchoolIsTooShort();
 
 contract MinistryEducationScienceRF {
@@ -16,9 +16,9 @@ contract MinistryEducationScienceRF {
         string name;
     }
 
-    address private s_ministry;
-    address[] private s_schoolAddresses;
-    mapping(address => School) private s_schools;
+    address public s_ministry;
+    address[] public s_schoolAddresses;
+    mapping(address => School) public s_schools;
 
     event MinistrySetted(address indexed _ministry);
     event SchoolAdded(address indexed _contractAddress, address indexed _owner);
@@ -33,6 +33,10 @@ contract MinistryEducationScienceRF {
         _;
     }
 
+    /**
+     * @dev Transfers ownership of the contract to a new account (`_newMinistry`).
+     * Can only be called by the current owner.
+     */
     function setMinistry(address _newMinistry) external onlyMinistry {
         if (_newMinistry == address(0)) {
             revert MinistryEducationScienceRF__NewMinistryHasInvalidAddress();
@@ -41,9 +45,14 @@ contract MinistryEducationScienceRF {
         emit MinistrySetted(_newMinistry);
     }
 
+    /**
+     * @dev Creates the new SchoolManagement contract.
+     * '_schoolOwner' - the owner of the child contract, '_name' - the name of the new school.
+     * Can only be called by the current owner.
+     */
     function addSchool(address _schoolOwner, string _name) external onlyMinistry returns(bool) {
         if (_schoolOwner == address(0)) {
-            revert MinistryEducationScienceRF__SchoolHasInvalidAddress();
+            revert MinistryEducationScienceRF__SchoolOwnerHasInvalidAddress();
         }
 
         if (strLength(_name) <= 5) {
@@ -61,10 +70,6 @@ contract MinistryEducationScienceRF {
         s_schools[newContract] = tmp;
         emit SchoolAdded(newContract, _schoolOwner);
         return true;
-    }
-
-    function getMinistry() external view returns(address) {
-        return s_ministry;
     }
 
     function strLength(string memory _text) internal pure returns(uint256) {
