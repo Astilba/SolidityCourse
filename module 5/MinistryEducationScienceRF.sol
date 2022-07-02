@@ -60,7 +60,7 @@ contract MinistryEducationScienceRF {
         }
 
         uint256 schoolId = s_schoolAddresses.length;
-        address newContract = address(new SchoolManagement(_schoolOwner, _name, s_ministry));
+        address newContract = address(new SchoolManagement(_schoolOwner, _name, address(this)));
         School memory tmp = Child({
             id: schoolId,
             owner: _schoolOwner,
@@ -72,7 +72,7 @@ contract MinistryEducationScienceRF {
         return true;
     }
 
-    function strLength(string memory _text) internal pure returns(uint256) {
+    function strLength(string memory _text) public pure returns(uint256) {
         bytes memory res = abi.encodePacked(_text);
         return res.length;
     }
