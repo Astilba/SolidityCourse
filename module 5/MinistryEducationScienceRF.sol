@@ -8,6 +8,8 @@ error MinistryEducationScienceRF__NewMinistryHasInvalidAddress();
 error MinistryEducationScienceRF__SchoolOwnerHasInvalidAddress();
 error MinistryEducationScienceRF__NameOfSchoolIsTooShort();
 
+// Контракт которым управляет Министерство образования и науки Российской Федерации.
+// Данный контракт позволяет создавать школы для последующего аудита и прозрачности в проставление оценок и выдаче дипломов.
 contract MinistryEducationScienceRF {
 
     struct School{
@@ -21,7 +23,7 @@ contract MinistryEducationScienceRF {
     mapping(address => School) public s_schools;
 
     event MinistrySetted(address indexed _ministry);
-    event SchoolAdded(address indexed _contractAddress, address indexed _owner);
+    event SchoolAdded(string indexed _name, address indexed _contractAddress, address indexed _owner);
 
     constructor(address _ministry) {
         s_ministry = _ministry;
@@ -29,7 +31,7 @@ contract MinistryEducationScienceRF {
     }
 
     modifier onlyMinistry {
-        require(msg.sender == s_ministry, "You are not a ministry!");
+        require(msg.sender == s_ministry, "You do not have permission to run this function. Only ministry allowed.");
         _;
     }
 
@@ -50,7 +52,7 @@ contract MinistryEducationScienceRF {
      * '_schoolOwner' - the owner of the child contract, '_name' - the name of the new school.
      * Can only be called by the current owner.
      */
-    function addSchool(address _schoolOwner, string _name) external onlyMinistry returns(bool) {
+    function addSchool(address _schoolOwner, string _name) external onlyMinistry {
         if (_schoolOwner == address(0)) {
             revert MinistryEducationScienceRF__SchoolOwnerHasInvalidAddress();
         }
@@ -68,8 +70,7 @@ contract MinistryEducationScienceRF {
         });
         s_schoolAddresses.push(newContract);
         s_schools[newContract] = tmp;
-        emit SchoolAdded(newContract, _schoolOwner);
-        return true;
+        emit SchoolAdded(_name, newContract, _schoolOwner);
     }
 
     function strLength(string memory _text) public pure returns(uint256) {
