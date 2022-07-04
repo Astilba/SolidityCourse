@@ -24,10 +24,12 @@ contract SchoolManagement {
 
     address[] public s_lessonAddresses;
     mapping(address => Lesson) public s_lessons;
+    mapping(bytes32 => string) private s_certifications;
 
     event SchoolSetted(address indexed _owner);
     event SchoolNameSetted(string indexed _name);
     event LessonAdded(string indexed _name);
+    event CertificationAdded(bytes32 indexed _fioHash);
 
     constructor(address _owner, string _name, address _ministry) {
         s_school = _owner;
@@ -92,6 +94,34 @@ contract SchoolManagement {
         s_lessonAddresses.push(newLesson);
         s_lessons[newLesson] = tmp;
         emit LessonAdded(_name);
+    }
+
+    /**
+     * @dev Adds or updates the student certification.
+     * '_fio', '_passport' - the student data.
+     * '_link' - the CID reference in IPFS.
+     * Can only be called by the current owner.
+     */
+    function addCertification(string _fio, string _passport, string _link) external onlySchool {
+        bytes32 fioHash = getStudentHash(_fio, _passport);
+        s_certifications[fioHash] = _link;
+        emit CertificationAdded(fioHash);
+    }
+
+    /**
+     * @dev Returns the link (CID reference in IPFS) to the student certification.
+     * '_fio', '_passport' - the student data.
+     */
+    function getCertification(string _fio, string _passport) external view returns(string) {
+        return s_certifications[getStudentHash(_fio, _passport)];
+    }
+
+    /**
+    * @dev Returns the hash of the student.
+    * '_fio', '_passport' - the student data.
+     */
+    function getStudentHash(string _fio, string _passport) public pure returns(bytes32) {
+        return keccak256(abi.encodePacked(_fio, _passport));
     }
 
 }

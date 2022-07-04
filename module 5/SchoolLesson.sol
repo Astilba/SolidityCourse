@@ -62,10 +62,6 @@ contract SchoolLesson is ISchoolLesson {
         emit StudentRated(studentHash, _mark);
     }
 
-    function getStudentHash(string _fio, string _passport) external pure returns(bytes32) {
-        return keccak256(abi.encodePacked(_fio, _passport));
-    }
-
     function setTeacher(address _teacher) external onlySchool {
         if (s_teachers[_teacher] == true) {
             revert SchoolLesson__TheTeacherHasAlreadyBeenAdded();
