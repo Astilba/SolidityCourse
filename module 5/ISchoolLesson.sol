@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 interface ISchoolLesson {
 
     struct ExamReview {
+        uint256 id;
         string fio;
-        bool status;
     }
 
     function showMark(string _fio, string _passport) external view returns(uint256);

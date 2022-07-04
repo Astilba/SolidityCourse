@@ -12,7 +12,7 @@ error SchoolManagement__LessonNameIsTooShort();
 
 contract SchoolManagement {
 
-    MinistryEducationScienceRF private i_ministryContract;
+    MinistryEducationScienceRF immutable private i_ministryContract;
     address public s_school;
     string public s_name;
 
