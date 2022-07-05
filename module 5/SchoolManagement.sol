@@ -16,8 +16,8 @@ contract SchoolManagement {
     address public s_school;
     string public s_name;
 
-    address[] public s_lessonAddresses;
-    mapping(address => string) public s_lessons;
+    string[] public s_lessonNames;
+    mapping(string => address) public s_lessons;
     mapping(bytes32 => string) private s_certifications;
 
     event SchoolSetted(address indexed _owner);
@@ -73,15 +73,13 @@ contract SchoolManagement {
             revert SchoolManagement__LessonNameIsTooShort();
         }
 
-        uint256 size = s_lessons.length;
-        for(uint256 i; i < size; ++i) {
-            if (s_lessons[s_lessonAddresses[i]] == _name) {
-                revert SchoolManagement__LessonAlreadyExists();
-            }
+        if (s_lessons[_name] != address(0)) {
+            revert SchoolManagement__LessonAlreadyExists();
         }
+
         address newLesson = address(new SchoolLesson(address(this), _name));
-        s_lessonAddresses.push(newLesson);
-        s_lessons[newLesson] = _name;
+        s_lessonNames.push(_name);
+        s_lessons[_name] = newLesson;
         emit LessonAdded(_name);
     }
 
