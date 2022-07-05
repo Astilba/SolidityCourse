@@ -2,9 +2,10 @@
 
 pragma solidity ^0.8.15;
 
-import "\MinistryEducationScienceRF.sol";
-import "\SchoolManagement.sol";
-import "\ISchoolLesson.sol";
+import "./MinistryEducationScienceRF.sol";
+import "./SchoolManagement.sol";
+import "./ISchoolLesson.sol";
+import "./SchoolLib.sol";
 
 error SchoolLesson__NewSchoolHasInvalidAddress();
 error SchoolLesson__TheTeacherHasAlreadyBeenAdded();
@@ -14,18 +15,9 @@ error SchoolLesson__TheRequestHasAlreadyBeenAdded();
 contract SchoolLesson is ISchoolLesson {
     SchoolManagement private s_school;
     string private s_name;
-    address[] public s_teacherAddresses;
     mapping(address => bool) private s_teachers;
-    mapping(bytes32 => uint256) private s_assessments;
-    ExamReview[] private s_examReviews;
-    mapping(string => bool) s_examReviewStatuses;
-
-    event StudentRated(bytes32 _studentHash, uint256 _assessment);
-    event TeacherSetted(address indexed _teacher);
-    event TeacherRemoved(address indexed _teacher);
-    event SchoolSetted(address indexed _school);
-    event ExamReviewRequestAdded(uint256 indexed _requestId, string indexed _fio);
-    event ExamReviewed(uint256 indexed _requestId);
+    mapping(bytes32 => SchoolLib.MarkInfo) private s_marks;
+    string [] private s_examReviews;
 
     constructor(address _school, string _name) {
         s_school = SchoolManagement(_school);
@@ -47,33 +39,31 @@ contract SchoolLesson is ISchoolLesson {
      * @dev Returns the student mark.
      * '_fio', '_passport' - the student data.
      */
-    function showMark(string _fio, string _passport) external view returns(uint256) {
-        return s_assessments[s_school.getStudentHash(_fio, _passport)];
+    function showMark(string memory _fio, string memory _passport) external view override returns(SchoolLib.MarkInfo memory) {
+        SchoolLib.MarkInfo memory markStudent = s_marks[s_school.getStudentHash(_fio, _passport)];
+        return markStudent;
     }
 
     /**
      * @dev Create the new request for review of the assessment.
      * '_fio' - the student data.
      */
-    function examReviewRequest(string _fio) external {
-        if (s_examReviewStatuses[_fio] == true) {
-            revert SchoolLesson__TheRequestHasAlreadyBeenAdded();
-        }
+    function examReviewRequest(string memory _fio) external override {
         uint256 size = s_examReviews.length;
-        ExamReview memory tmp = ExamReview({
-            id: size,
-            fio: _fio
-        });
-        ExamReview.push(tmp);
-        s_examReviewStatuses[_fio] = true;
-        emit ExamReviewRequestAdded(size, _fio);
+        for (uint256 i; i < size; i++) {
+            if (s_examReviews[i] == _fio) {
+                revert SchoolLesson__TheRequestHasAlreadyBeenAdded();
+            }
+        }
+        s_examReviews.push(_fio);
+        emit ExamReviewRequestAdded(_fio);
     }
 
     /**
      * @dev Returns the list of student requests.
      * Can only be called by the teacher.
      */
-    function viewingStudentRequested() external view onlyTeacher returns(ExamReview[]) {
+    function viewingStudentRequested() external view override onlyTeacher returns(string[] memory) {
         return s_examReviews;
     }
 
@@ -82,10 +72,16 @@ contract SchoolLesson is ISchoolLesson {
      * '_id' - the exam review request id.
      * Can only be called by the teacher.
      */
-    function examReview(uint256 _id) external onlyTeacher {
-        string memory fio = s_examReviews[_id].fio;
-        s_examReviewStatuses[fio] = false;
-        emit ExamReviewed(_id);
+    function examReview(string memory _fio) external onlyTeacher {
+        uint256 size = s_examReviews.length;
+        for (uint256 i; i < size; i++) {
+            if (s_examReviews[i] == _fio) {
+                s_examReviews[i] = s_examReviews[size - 1];
+                s_examReviews.pop();
+                break;
+            }
+        }
+        emit ExamReviewed(_fio);
     }
 
     /**
@@ -94,10 +90,24 @@ contract SchoolLesson is ISchoolLesson {
      * '_mark' - the new mark.
      * Can only be called by the teacher.
      */
-    function rateStudent(string _fio, string _passport, uint256 _mark) external onlyTeacher {
+    function rateStudent(string memory _fio, string memory _passport, uint256 _mark) external override onlyTeacher {
         bytes32 studentHash = s_school.getStudentHash(_fio, _passport);
-        s_assessments[studentHash] = _mark;
-        emit StudentRated(studentHash, _mark);
+        if (s_marks[studentHash].timestamp == 0) {
+            s_marks[studentHash] = SchoolLib.MarkInfo({
+                mark: _mark,
+                markReview: 0,
+                timestamp: block.timestamp,
+                timestampReview: 0,
+                teacher: msg.sender,
+                teacherReview: address(0),
+                school: s_school
+            });
+        } else {
+            s_marks[studentHash].markReview = _mark;
+            s_marks[studentHash].timestampReview = block.timestamp;
+            s_marks[studentHash].teacherReview = msg.sender;
+        }
+        emit StudentEvaluated(studentHash, _mark);
     }
 
     /**
@@ -105,11 +115,10 @@ contract SchoolLesson is ISchoolLesson {
      * '_teacher' - the new teacher address.
      * Can only be called by the school.
      */
-    function setTeacher(address _teacher) external onlySchool {
+    function setTeacher(address _teacher) external override onlySchool {
         if (s_teachers[_teacher] == true) {
             revert SchoolLesson__TheTeacherHasAlreadyBeenAdded();
         }
-        s_teacherAddresses.push(_teacher);
         s_teachers[_teacher] = true;
         emit TeacherSetted(_teacher);
     }
@@ -119,17 +128,9 @@ contract SchoolLesson is ISchoolLesson {
      * '_teacher' - the teacher address.
      * Can only be called by the school.
      */
-    function removeTeacher(address _teacher) external onlySchool {
+    function removeTeacher(address _teacher) external override onlySchool {
         if (s_teachers[_teacher] == false) {
             revert SchoolLesson__TheTeacherHasNotBeenAdded();
-        }
-        uint256 size = s_teacherAddresses.length;
-        for (i; i < size; i++) {
-            if (s_teacherAddresses[i] == _teacher) {
-                s_teacherAddresses[i] = s_teacherAddresses[size - 1];
-                s_teacherAddresses.pop();
-                break;
-            }
         }
         s_teachers[_teacher] = false;
         emit TeacherRemoved(_teacher);
@@ -140,7 +141,7 @@ contract SchoolLesson is ISchoolLesson {
     * '_newSchool' - address of the new school contract.
     * Can only be called by the school.
     */
-    function setSchool(address _newSchool) external onlySchool {
+    function setSchool(address _newSchool) external override onlySchool {
         if (_newSchool == address(0)) {
             revert SchoolLesson__NewSchoolHasInvalidAddress();
         }

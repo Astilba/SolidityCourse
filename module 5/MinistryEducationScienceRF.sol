@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.15;
 
-import "\SchoolManagement.sol";
+import "./SchoolManagement.sol";
 
 error MinistryEducationScienceRF__NewMinistryHasInvalidAddress();
 error MinistryEducationScienceRF__SchoolOwnerHasInvalidAddress();
